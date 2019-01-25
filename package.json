@@ -1,0 +1,25 @@
+{
+  "name": "@dolfdijkstra/cec-management-api-cli-generator",
+  "version": "1.0.0",
+  "description": "Generator for the management api cli tools.",
+  "main": "src/cli.js",
+  "scripts": {
+    "format": "prettier-standard 'src/*.js' || true",
+    "check": "standard --fix 'src/*.js' || true",
+    "fnc": "prettier-standard 'src/*.js' && standard --fix 'src/*.js' || true"
+  },
+  "author": "Dolf Dijkstra",
+  "license": "MIT",
+  "bin": {
+    "cec-man-api-client-generator": "./src/cli.js"
+  },
+  "dependencies": {
+    "commander": "^2.19.0",
+    "lodash": "^4.17.11",
+    "querystring": "^0.2.0"
+  },
+  "devDependencies": {
+    "prettier-standard": "^9.1.1",
+    "standard": "^12.0.1"
+  }
+}
