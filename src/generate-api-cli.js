@@ -26,7 +26,7 @@ const escapeDescription = param =>
 
 const onlyFirst = (e, i) => i === 0
 
-const readJSON = require('./util').readJSON
+const { readJSON } = require('./util')
 const addBins = (targetDir, bins) => {
   return readJSON(path.join(targetDir, 'package.json'))
     .then(json => ({ ...json, ...bins }))
@@ -47,7 +47,7 @@ const generateCommandSource = ([operationId, m]) => {
   const optionParams = m.parameters
     .filter(p => !(p.in === 'header' && p.name === 'X-Requested-With'))
     .sort(requiredFirst)
-  source += optionParams
+  source += otherParams
     .map(
       p =>
         `.option('--${_.camelCase(p.name)} <value>','${escapeDescription(p)}')`
@@ -61,8 +61,8 @@ const generateCommandSource = ([operationId, m]) => {
            ${otherParams.map(otherMapper).join('\n')}
            ${bodyParams.map(bodyMapper).join('\n')}
         op.${operationId}(${m.parameters
-  .map(paramValue)
-  .join(',')}).then(responseHandler).catch(err => { console.error(err) })
+    .map(paramValue)
+    .join(',')}).then(responseHandler).catch(err => { console.error(err) })
       })
       `
   return source
@@ -70,10 +70,8 @@ const generateCommandSource = ([operationId, m]) => {
 const generate = (swaggerFile, targetDir) => {
   return readJSON(swaggerFile).then(json => {
     let version = json.info.version
-    if(version.split('.') < 3 ) version = version +'.0'
-    const tags = json.tags.reduce((aggr, o) => ({ ...aggr, [o.name]: {} }), {
-      Tokens: {}
-    })
+    if (version.split('.') < 3) version = version + '.0'
+    const tags = json.tags.reduce((aggr, o) => ({ ...aggr, [o.name]: {} }), {})
 
     Object.entries(json.paths).forEach(([path, methods]) => {
       Object.entries(methods).forEach(([method, op]) => {
@@ -96,13 +94,13 @@ const generate = (swaggerFile, targetDir) => {
     const {readConfig,readStdIn ,responseHandler} = require('./cli-util')
     const {${_.camelCase(tag)}} = require('./client');
     const {host,auth} = readConfig()
-    console.log('Using CEC at '+ host)
+    if(process.stdout.isTTY) console.log('Using CEC at '+ host)
 
     const op = ${_.camelCase(tag)}(host, auth)
     program.version('${version}')
     ${Object.entries(ops)
-    .map(generateCommandSource)
-    .join('\n')}
+      .map(generateCommandSource)
+      .join('\n')}
   
       
     program.parse(process.argv)

@@ -37,6 +37,10 @@ const readStdIn = () => {
   return new Promise((resolve, reject) => {
     process.stdin.setEncoding('utf8')
     let data = ''
+    if (process.stdin.isTTY)
+      console.log(
+        'Please provide a body to send with the request. End the input with Ctrl-D.\n'
+      )
     process.stdin.on('readable', () => {
       let chunk
       // Use a loop to make sure we read all available data.
@@ -74,8 +78,8 @@ const readConfig = () => {
     return a.host && a.token
       ? a
       : fs.existsSync(f)
-        ? JSON.parse(fs.readFileSync(f))
-        : a
+      ? JSON.parse(fs.readFileSync(f))
+      : a
   }, '')
   if (config === '') {
     throw new Error(
