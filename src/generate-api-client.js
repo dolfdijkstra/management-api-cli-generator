@@ -43,9 +43,7 @@ const generate = (swaggerFilePath, targetPath) => {
   copyPackage(targetPath)
   return readJSON(swaggerFilePath).then(json => {
     //group all operationsIds under a tag
-    const tags = json.tags.reduce((aggr, o) => ({ ...aggr, [o.name]: {} }), {
-      Tokens: {}
-    })
+    const tags = json.tags.reduce((aggr, o) => ({ ...aggr, [o.name]: {} }), {})
     const basePath = json.basePath
     Object.entries(json.paths).forEach(([path, methods]) => {
       Object.entries(methods).forEach(([method, op]) => {
