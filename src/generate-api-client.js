@@ -42,6 +42,7 @@ const generate = (swaggerFilePath, targetPath) => {
   // copy package-cli to targetPath
   copyPackage(targetPath)
   return readJSON(swaggerFilePath).then(json => {
+    //group all operationsIds under a tag
     const tags = json.tags.reduce((aggr, o) => ({ ...aggr, [o.name]: {} }), {
       Tokens: {}
     })
