@@ -37,10 +37,11 @@ const readStdIn = () => {
   return new Promise((resolve, reject) => {
     process.stdin.setEncoding('utf8')
     let data = ''
-    if (process.stdin.isTTY)
+    if (process.stdin.isTTY) {
       console.log(
         'Please provide a body to send with the request. End the input with Ctrl-D.\n'
       )
+    }
     process.stdin.on('readable', () => {
       let chunk
       // Use a loop to make sure we read all available data.
@@ -54,13 +55,20 @@ const readStdIn = () => {
     })
   })
 }
-const readConfig = () => {
-  let host = process.env.HOST
-  let auth = process.env.AUTH
+const readConfig = async () => {
+  let host = process.env.OCE_HOST
+  let auth = process.env.OCE_AUTH
   if (host && auth) {
     host = new URL(host).origin
-    return { host: auth }
+    return { host, auth }
   }
+  const env = process.env.OCE_CLI_CONFIG
+  if (env) {
+    const { decrypt } = require('./enc')
+    let { host, auth } = JSON.parse(await decrypt(env))
+    return { host, auth }
+  }
+
   const fs = require('fs')
   const path = require('path')
   const homedir = require('os').homedir()
@@ -69,10 +77,10 @@ const readConfig = () => {
   let parts = []
 
   while (parts.length < 5 && parent.split(path.sep).length > 1) {
-    parts.push(path.join(parent, '.cec-config.json'))
+    parts.push(path.join(parent, '.oce-config.json'))
     parent = path.dirname(parent)
   }
-  const homeConfig = path.join(homedir, '.cec-config.json')
+  const homeConfig = path.join(homedir, '.oce-config.json')
   if (parts.indexOf(homeConfig) === -1) parts.push()
   const config = parts.reduce((a, f) => {
     return a.host && a.token
@@ -83,7 +91,7 @@ const readConfig = () => {
   }, '')
   if (config === '') {
     throw new Error(
-      `.cec-config.json could not be found in '${parts.join(
+      `.oce-config.json could not be found in '${parts.join(
         ','
       )}' or does not have a host and token fields.`
     )

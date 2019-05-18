@@ -1,5 +1,5 @@
 {
-  "name": "@dolfdijkstra/cec-management-api-cli-generator",
+  "name": "@dolfdijkstra/oce-management-api-cli-generator",
   "version": "1.0.0",
   "description": "Generator for the management api cli tools.",
   "main": "src/cli.js",
@@ -11,7 +11,7 @@
   "author": "Dolf Dijkstra",
   "license": "MIT",
   "bin": {
-    "cec-man-api-client-generator": "./src/cli.js"
+    "oce-management-api-client-generator": "./src/cli.js"
   },
   "dependencies": {
     "commander": "^2.19.0",

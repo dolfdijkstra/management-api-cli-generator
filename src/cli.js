@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const fs = require('fs')
+const targetDir = './generated'
 
 const clientGenerator = require('./generate-api-client')
 const cliGenerator = require('./generate-api-cli')
@@ -16,7 +17,6 @@ if (require.main === module) {
       if (isBlank(swaggerFile)) {
         throw new Error('A swagger file must be provided')
       }
-      const targetDir = './generated'
       fs.stat(targetDir, (err, stat) => {
         if (err) {
           fs.mkdirSync(targetDir)
@@ -51,11 +51,14 @@ if (require.main === module) {
         if (err) {
           fs.mkdirSync(targetDir)
         }
-        clientGenerator.generate(swaggerFile, targetDir).then(() => {
-          console.info('done')
-        })
-      }).catch(err => {
-        console.error(err)
+        clientGenerator
+          .generate(swaggerFile, targetDir)
+          .then(() => {
+            console.info('done')
+          })
+          .catch(err => {
+            console.error(err)
+          })
       })
     })
 
@@ -66,7 +69,7 @@ if (require.main === module) {
       if (isBlank(swaggerFile)) {
         throw new Error('A swagger file must be provided')
       }
-      const targetDir = './generated'
+
       fs.stat(targetDir, (err, stat) => {
         if (err) {
           fs.mkdirSync(targetDir)

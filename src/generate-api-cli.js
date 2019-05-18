@@ -73,7 +73,8 @@ const generate = (swaggerFile, targetDir) => {
     if (version.split('.') < 3) version = version + '.0'
     const tags = json.tags.reduce((aggr, o) => ({ ...aggr, [o.name]: {} }), {})
 
-    Object.entries(json.paths).forEach(([path, methods]) => {
+    const paths = Object.entries(json.paths)
+    paths.forEach(([path, methods]) => {
       Object.entries(methods).forEach(([method, op]) => {
         op.tags.forEach(tag => {
           if (!tags[tag]) {
@@ -83,20 +84,27 @@ const generate = (swaggerFile, targetDir) => {
         })
       })
     })
-    fs.createReadStream(path.join(__dirname, 'cli-util.js')).pipe(
-      fs.createWriteStream(path.join(targetDir, 'src', 'cli-util.js'))
+    const files = ['cli-util.js', 'login.js', 'enc.js']
+    files.forEach(fileName => {
+      fs.createReadStream(path.join(__dirname, fileName)).pipe(
+        fs.createWriteStream(path.join(targetDir, 'src', fileName))
+      )
+    })
+    fs.createReadStream(path.join(__dirname, 'cli-base.js')).pipe(
+      fs.createWriteStream(path.join(targetDir, 'src', 'cli.js'))
     )
 
     Object.entries(tags).map(([tag, ops]) => {
       let source = `#!/usr/bin/env node
-
+    ;(async () => {
     const program = require('commander');
     const {readConfig,readStdIn ,responseHandler} = require('./cli-util')
-    const {${_.camelCase(tag)}} = require('./client');
-    const {host,auth} = readConfig()
-    if(process.stdout.isTTY) console.log('Using CEC at '+ host)
+    const {host,auth} = await readConfig()
+    if(process.stdout.isTTY) console.log('Using OCE at '+ host)
 
-    const op = ${_.camelCase(tag)}(host, auth)
+    const client = require('./client');
+    const op = client(host, auth).${_.camelCase(tag)}
+
     program.version('${version}')
     ${Object.entries(ops)
       .map(generateCommandSource)
@@ -109,7 +117,7 @@ const generate = (swaggerFile, targetDir) => {
           // e.g. display usage
           program.help();
         }
-        
+      })() 
         `
       fs.writeFile(
         path.join(targetDir, 'src/cli-' + _.camelCase(tag) + '.js'),
@@ -122,13 +130,14 @@ const generate = (swaggerFile, targetDir) => {
         }
       )
     })
+    const cmds = Object.keys(tags)
     const packageCommands = {
-      bin: Object.keys(tags).reduce(
+      bin: cmds.reduce(
         (aggr, key) => ({
           ...aggr,
-          ['cec-' + _.camelCase(key)]: `./src/cli-${_.camelCase(key)}.js`
+          ['oce-management-' + _.camelCase(key)]: `./src/cli-${_.camelCase(key)}.js`
         }),
-        {}
+        {'oce-management' : './src/cli.js'}
       )
     }
     return addBins(targetDir, packageCommands)
