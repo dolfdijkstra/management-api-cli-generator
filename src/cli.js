@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 const fs = require('fs')
+const fetch = require('node-fetch')
+const { readJSON } = require('./util')
+
 const targetDir = './generated'
 
 const clientGenerator = require('./generate-api-client')
@@ -9,21 +12,33 @@ const isBlank = v => v === undefined || v === null || v === ''
 
 if (require.main === module) {
   const program = require('commander')
-  program.version('0.0.1')
+  program.version('0.5.1')
   program
-    .command('generate-all <swagger-file>')
+    .command('generate-all [swagger-file]')
     .description('Generate the client module and the command line tools')
-    .action(function (swaggerFile, cmd) {
+    .action(async swaggerFile => {
+      let swagger = null
+
       if (isBlank(swaggerFile)) {
-        throw new Error('A swagger file must be provided')
+        const response = await fetch(
+          'https://docs.oracle.com/en/cloud/paas/content-cloud/rest-api-manage-content/swagger.json'
+        )
+        if (!response.ok) {
+          throw new Error("Swagger file can't be downloaded.")
+        }
+        const body = await response.json()
+        swagger = body
+      } else {
+        swagger = await readJSON(swaggerFile)
       }
+      
       fs.stat(targetDir, (err, stat) => {
         if (err) {
           fs.mkdirSync(targetDir)
         }
-        clientGenerator.generate(swaggerFile, targetDir).then(() => {
+        clientGenerator.generate(swagger, targetDir).then(() => {
           return cliGenerator
-            .generate(swaggerFile, targetDir)
+            .generate(swagger, targetDir)
             .then(() => {
               console.info('done')
               console.info(`To use the tools you have to install them:

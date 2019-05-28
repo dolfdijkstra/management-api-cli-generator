@@ -1,12 +1,11 @@
 {
   "name": "oce-management-api-client",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "The management api cli tools.",
   "main": "src/client.js",
   "author": "Dolf Dijkstra",
   "license": "MIT",
   "dependencies": {
-    "async": "^2.6.1",
     "commander": "^2.19.0",
     "lodash": "^4.17.11",
     "node-fetch": "^2.3.0"

@@ -7,7 +7,7 @@ const toParameterName = name =>
 
 const paramValue = p => {
   if (p.in === 'header' && p.name === 'X-Requested-With') {
-    return '"XMLHttpRequest"'
+    return 'xRequestedWith: "XMLHttpRequest"'
   }
   if (p.in === 'body') return toParameterName(p.name)
   return toParameterName(p.name)
@@ -60,42 +60,41 @@ const generateCommandSource = ([operationId, m]) => {
   source += `.action(async cmd => {
            ${otherParams.map(otherMapper).join('\n')}
            ${bodyParams.map(bodyMapper).join('\n')}
-        op.${operationId}(${m.parameters
-    .map(paramValue)
-    .join(',')}).then(responseHandler).catch(err => { console.error(err) })
+        op.${operationId}({${m.parameters
+  .map(paramValue)
+  .join(',')}}).then(responseHandler).catch(err => { console.error(err) })
       })
       `
   return source
 }
-const generate = (swaggerFile, targetDir) => {
-  return readJSON(swaggerFile).then(json => {
-    let version = json.info.version
-    if (version.split('.') < 3) version = version + '.0'
-    const tags = json.tags.reduce((aggr, o) => ({ ...aggr, [o.name]: {} }), {})
+const generate = (swagger, targetDir) => {
+  let version = swagger.info.version
+  if (version.split('.') < 3) version = version + '.0'
+  const tags = swagger.tags.reduce((aggr, o) => ({ ...aggr, [o.name]: {} }), {})
 
-    const paths = Object.entries(json.paths)
-    paths.forEach(([path, methods]) => {
-      Object.entries(methods).forEach(([method, op]) => {
-        op.tags.forEach(tag => {
-          if (!tags[tag]) {
-            throw new Error(tag)
-          }
-          tags[tag][op.operationId] = { method, path, ...op }
-        })
+  const paths = Object.entries(swagger.paths)
+  paths.forEach(([path, methods]) => {
+    Object.entries(methods).forEach(([method, op]) => {
+      op.tags.forEach(tag => {
+        if (!tags[tag]) {
+          throw new Error(tag)
+        }
+        tags[tag][op.operationId] = { method, path, ...op }
       })
     })
-    const files = ['cli-util.js', 'login.js', 'enc.js']
-    files.forEach(fileName => {
-      fs.createReadStream(path.join(__dirname, fileName)).pipe(
-        fs.createWriteStream(path.join(targetDir, 'src', fileName))
-      )
-    })
-    fs.createReadStream(path.join(__dirname, 'cli-base.js')).pipe(
-      fs.createWriteStream(path.join(targetDir, 'src', 'cli.js'))
+  })
+  const files = ['cli-util.js', 'login.js', 'enc.js']
+  files.forEach(fileName => {
+    fs.createReadStream(path.join(__dirname, fileName)).pipe(
+      fs.createWriteStream(path.join(targetDir, 'src', fileName))
     )
+  })
+  fs.createReadStream(path.join(__dirname, 'cli-base.js')).pipe(
+    fs.createWriteStream(path.join(targetDir, 'src', 'cli.js'))
+  )
 
-    Object.entries(tags).map(([tag, ops]) => {
-      let source = `#!/usr/bin/env node
+  Object.entries(tags).map(([tag, ops]) => {
+    let source = `#!/usr/bin/env node
     ;(async () => {
     const program = require('commander');
     const {readConfig,readStdIn ,responseHandler} = require('./cli-util')
@@ -107,8 +106,8 @@ const generate = (swaggerFile, targetDir) => {
 
     program.version('${version}')
     ${Object.entries(ops)
-      .map(generateCommandSource)
-      .join('\n')}
+    .map(generateCommandSource)
+    .join('\n')}
   
       
     program.parse(process.argv)
@@ -119,28 +118,30 @@ const generate = (swaggerFile, targetDir) => {
         }
       })() 
         `
-      fs.writeFile(
-        path.join(targetDir, 'src/cli-' + _.camelCase(tag) + '.js'),
-        source,
-        'utf-8',
-        err => {
-          if (err) {
-            console.error(err)
-          }
+    fs.writeFileSync(
+      path.join(targetDir, 'src/cli-' + _.camelCase(tag) + '.js'),
+      source,
+      'utf-8',
+      err => {
+        if (err) {
+          console.error(err)
         }
-      )
-    })
-    const cmds = Object.keys(tags)
-    const packageCommands = {
-      bin: cmds.reduce(
-        (aggr, key) => ({
-          ...aggr,
-          ['oce-management-' + _.camelCase(key)]: `./src/cli-${_.camelCase(key)}.js`
-        }),
-        {'oce-management' : './src/cli.js'}
-      )
-    }
-    return addBins(targetDir, packageCommands)
+      }
+    )
   })
+  const cmds = Object.keys(tags)
+  const packageCommands = {
+    bin: cmds.reduce(
+      (aggr, key) => ({
+        ...aggr,
+        ['oce-management-' + _.camelCase(key)]: `./src/cli-${_.camelCase(
+          key
+        )}.js`
+      }),
+      { 'oce-management': './src/cli.js' }
+    )
+  }
+  return addBins(targetDir, packageCommands)
 }
+
 module.exports = { generate }

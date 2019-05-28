@@ -86,8 +86,8 @@ const readConfig = async () => {
     return a.host && a.token
       ? a
       : fs.existsSync(f)
-      ? JSON.parse(fs.readFileSync(f))
-      : a
+        ? JSON.parse(fs.readFileSync(f))
+        : a
   }, '')
   if (config === '') {
     throw new Error(

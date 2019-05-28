@@ -1,4 +1,3 @@
-const { readJSON } = require('./util')
 const querystring = require('querystring')
 const path = require('path')
 
@@ -61,8 +60,8 @@ keepAlive: true
 ${children.map(block => block.source).join('\n')}
 ${exports_}
 const client = (host, authorization) =>{return {${moduleReturn} }}
-
-module.exports=client
+module.exports.readConfig = require('./cli-util').readConfig
+module.exports.client = client 
 
 `
 
@@ -130,10 +129,10 @@ const tagMapper = basePath => ([tag, ops]) => {
     })
     subBlock.sourceLine(`*/`)
     subBlock.sourceLine(
-      `   const ${operationId} = (${m.parameters
+      `   const ${operationId} = ({${m.parameters
         .map(p => p.name)
         .map(toParameterName)
-        .join(',')}) => { ${functionBody}}`
+        .join(',')}}) => { ${functionBody}}`
     )
   })
   subBlock.sourceLine(`return { ${Object.keys(ops).join(',')}}`)
@@ -141,30 +140,29 @@ const tagMapper = basePath => ([tag, ops]) => {
   return { tag, source: subBlock.toString() }
 }
 
-const generate = (swaggerFilePath, targetPath) => {
+const generate = async (swagger, targetPath) => {
   // copy package-cli to targetPath
   copyPackage(targetPath)
-  return readJSON(swaggerFilePath).then(json => {
-    // group all operationsIds under a tag
-    const tags = json.tags.reduce((aggr, o) => ({ ...aggr, [o.name]: {} }), {})
-    const basePath = json.basePath
-    Object.entries(json.paths).forEach(([path, methods]) => {
-      Object.entries(methods).forEach(([method, op]) => {
-        op.tags.forEach(tag => {
-          if (!tags[tag]) {
-            throw new Error(tag)
-          }
-          tags[tag][op.operationId] = { method, path, ...op }
-        })
+
+  // group all operationsIds under a tag
+  const tags = swagger.tags.reduce((aggr, o) => ({ ...aggr, [o.name]: {} }), {})
+  const basePath = swagger.basePath
+  Object.entries(swagger.paths).forEach(([path, methods]) => {
+    Object.entries(methods).forEach(([method, op]) => {
+      op.tags.forEach(tag => {
+        if (!tags[tag]) {
+          throw new Error(tag)
+        }
+        tags[tag][op.operationId] = { method, path, ...op }
       })
     })
-
-    const moduleCode = [moduleBlock(tags, tagMapper(basePath))].join('\n')
-    fs.writeFileSync(
-      path.join(targetPath, 'src', 'client.js'),
-      moduleCode,
-      'utf-8'
-    )
   })
+
+  const moduleCode = [moduleBlock(tags, tagMapper(basePath))].join('\n')
+  fs.writeFileSync(
+    path.join(targetPath, 'src', 'client.js'),
+    moduleCode,
+    'utf-8'
+  )
 }
 module.exports = { generate }
