@@ -74,7 +74,6 @@ const tagMapper = basePath => ([tag, ops]) => {
   subBlock.sourceLine(`/** ${tag} */`)
   subBlock.sourceLine(`const ${_.camelCase(tag)}_ = (host, authorization) => {`)
   Object.entries(ops).forEach(([operationId, m]) => {
-    // console.log(m)
     const pathParams = m.parameters.filter(p => p.in === 'path')
     const queryParams = m.parameters.filter(p => p.in === 'query')
     const headerParams = m.parameters.filter(p => p.in === 'header')
@@ -128,11 +127,15 @@ const tagMapper = basePath => ([tag, ops]) => {
       )
     })
     subBlock.sourceLine(`*/`)
+    const signature =
+      m.parameters.length == 0
+        ? ''
+        : `{${m.parameters
+          .map(p => p.name)
+          .map(toParameterName)
+          .join(',')}}`
     subBlock.sourceLine(
-      `   const ${operationId} = ({${m.parameters
-        .map(p => p.name)
-        .map(toParameterName)
-        .join(',')}}) => { ${functionBody}}`
+      `   const ${operationId} = (${signature}) => { ${functionBody} }`
     )
   })
   subBlock.sourceLine(`return { ${Object.keys(ops).join(',')}}`)

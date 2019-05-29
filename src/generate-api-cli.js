@@ -101,7 +101,7 @@ const generate = (swagger, targetDir) => {
     const {host,auth} = await readConfig()
     if(process.stdout.isTTY) console.log('Using OCE at '+ host)
 
-    const client = require('./client');
+    const { client } = require('./client');
     const op = client(host, auth).${_.camelCase(tag)}
 
     program.version('${version}')
@@ -116,7 +116,7 @@ const generate = (swagger, targetDir) => {
           // e.g. display usage
           program.help();
         }
-      })() 
+      })().catch(console.error) 
         `
     fs.writeFileSync(
       path.join(targetDir, 'src/cli-' + _.camelCase(tag) + '.js'),
