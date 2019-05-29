@@ -1,6 +1,6 @@
 rm -Rf generated/
 node src/cli.js generate-all "$1"
-prettier-standard generated/src/*
-standard --fix generated/src/*
 cd generated/
+prettier-standard src/*
+standard --fix src/*
 npm pack
