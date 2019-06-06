@@ -31,7 +31,7 @@ if (require.main === module) {
       } else {
         swagger = await readJSON(swaggerFile)
       }
-      
+
       fs.stat(targetDir, (err, stat) => {
         if (err) {
           fs.mkdirSync(targetDir)
