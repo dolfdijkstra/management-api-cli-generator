@@ -128,7 +128,7 @@ const tagMapper = basePath => ([tag, ops]) => {
     })
     subBlock.sourceLine(`*/`)
     const signature =
-      m.parameters.length == 0
+      m.parameters.length === 0
         ? ''
         : `{${m.parameters
           .map(p => p.name)
