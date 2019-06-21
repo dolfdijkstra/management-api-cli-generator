@@ -21,8 +21,8 @@ const requiredFirst = (a, b) => {
   return 1
 }
 
-const escapeDescription = param =>
-  param.description ? param.description.replace("'", "\\'") : ''
+const escapeQuote = v => (v ? v.replace("'", "\\'") : '')
+const escapeDescription = param => escapeQuote(param.description)
 
 const onlyFirst = (e, i) => i === 0
 
@@ -39,7 +39,7 @@ const addBins = (targetDir, bins) => {
 }
 const generateCommandSource = ([operationId, m]) => {
   let source = `program.command('${operationId}')`
-  source += `.description('${m.summary}')`
+  source += `.description('${escapeQuote(m.summary)}')`
   const bodyParams = m.parameters.filter(p => p.in === 'body').filter(onlyFirst)
   const otherParams = m.parameters
     .filter(p => p.in !== 'body')
