@@ -3,20 +3,21 @@ const fs = require('fs')
 const fetch = require('node-fetch')
 const { readJSON } = require('./util')
 
-const targetDir = './generated'
-
 const clientGenerator = require('./generate-api-client')
 const cliGenerator = require('./generate-api-cli')
 
 const isBlank = v => v === undefined || v === null || v === ''
 
 if (require.main === module) {
+  var version = require('./package.json').version
   const program = require('commander')
-  program.version('0.5.1')
+  program.version(version)
   program
     .command('generate-all [swagger-file]')
     .description('Generate the client module and the command line tools')
     .action(async swaggerFile => {
+      const targetDir = './generated'
+
       let swagger = null
 
       if (isBlank(swaggerFile)) {
@@ -34,7 +35,7 @@ if (require.main === module) {
 
       fs.stat(targetDir, (err, stat) => {
         if (err) {
-          fs.mkdirSync(targetDir)
+          fs.mkdirSync(targetDir, { recursive: true })
         }
         clientGenerator.generate(swagger, targetDir).then(() => {
           return cliGenerator
@@ -77,29 +78,6 @@ if (require.main === module) {
       })
     })
 
-  program
-    .command('generate-cli <swagger-file>')
-    .description('Generate the cec managent-api command line utilities.')
-    .action(function (swaggerFile, cmd) {
-      if (isBlank(swaggerFile)) {
-        throw new Error('A swagger file must be provided')
-      }
-
-      fs.stat(targetDir, (err, stat) => {
-        if (err) {
-          fs.mkdirSync(targetDir)
-        }
-        cliGenerator
-          .generate(swaggerFile, targetDir)
-          .then(bins => {
-            // TODO, update package.json
-            console.log(JSON.stringify(bins, null, 2))
-          })
-          .catch(err => {
-            console.error(err)
-          })
-      })
-    })
   // error on unknown commands
   program.on('command:*', function () {
     console.error('Invalid command: %s\n', program.args.join(' '))
