@@ -8,30 +8,38 @@ const cliGenerator = require('./generate-api-cli')
 
 const isBlank = v => v === undefined || v === null || v === ''
 
+const readSwagger = async location => {
+  const swaggerFile =
+    location ||
+    'https://docs.oracle.com/en/cloud/paas/content-cloud/rest-api-manage-content/swagger.json'
+
+  if (swaggerFile.startsWith('https://')) {
+    const response = await fetch(swaggerFile)
+    if (!response.ok) {
+      throw new Error("Swagger file can't be downloaded.")
+    }
+    return response.json()
+  } else {
+    return readJSON(swaggerFile)
+  }
+}
+
 if (require.main === module) {
-  var version = require('./package.json').version
+  var version = require('../package.json').version
   const program = require('commander')
   program.version(version)
   program
     .command('generate-all [swagger-file]')
     .description('Generate the client module and the command line tools')
-    .action(async swaggerFile => {
-      const targetDir = './generated'
+    .option(
+      '--target <target>',
+      'Target directory for the generated files, defaulting to ./generated',
+      './generated'
+    )
+    .action(async (swaggerFile, cmd) => {
+      const targetDir = cmd.target
 
-      let swagger = null
-
-      if (isBlank(swaggerFile)) {
-        const response = await fetch(
-          'https://docs.oracle.com/en/cloud/paas/content-cloud/rest-api-manage-content/swagger.json'
-        )
-        if (!response.ok) {
-          throw new Error("Swagger file can't be downloaded.")
-        }
-        const body = await response.json()
-        swagger = body
-      } else {
-        swagger = await readJSON(swaggerFile)
-      }
+      let swagger = await readSwagger(swaggerFile)
 
       fs.stat(targetDir, (err, stat) => {
         if (err) {
@@ -45,7 +53,7 @@ if (require.main === module) {
               console.info(`To use the tools you have to install them:
 
 
-> cd generated && npm pack && npm install -g *.tgz
+> cd ${targetDir} && npm pack && npm install -g *.tgz
 
               `)
             })
@@ -58,17 +66,21 @@ if (require.main === module) {
   program
     .command('generate-client <swagger-file>')
     .description('Generate the client module')
-    .action(function (swaggerFile, cmd) {
-      if (isBlank(swaggerFile)) {
-        throw new Error('A swagger file must be provided')
-      }
-      const targetDir = './generated'
+    .option(
+      '--target <target>',
+      'Target directory for the generated files, defaulting to ./generated',
+      './generated'
+    )
+    .action(async (swaggerFile, cmd) => {
+      const targetDir = cmd.target
+      let swagger = await readSwagger(swaggerFile)
+
       fs.stat(targetDir, (err, stat) => {
         if (err) {
           fs.mkdirSync(targetDir)
         }
         clientGenerator
-          .generate(swaggerFile, targetDir)
+          .generate(swagger, targetDir)
           .then(() => {
             console.info('done')
           })
