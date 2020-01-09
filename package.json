@@ -14,8 +14,8 @@
     "oce-management-api-client-generator": "./src/cli.js"
   },
   "dependencies": {
-    "commander": "^2.20.0",
-    "lodash": "^4.17.11",
+    "commander": "^2.20.3",
+    "lodash": "^4.17.15",
     "node-fetch": "^2.6.0"
   },
   "devDependencies": {
