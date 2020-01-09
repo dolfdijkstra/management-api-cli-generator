@@ -21,7 +21,7 @@ const requiredFirst = (a, b) => {
   return 1
 }
 
-const escapeQuotes = v => (v ? v.replace("'", "\\'") : '')
+const escapeQuotes = v => (v ? v.replace(/'/g, "\\'") : '')
 const escapeDescription = param => escapeQuotes(param.description)
 
 const onlyFirst = (e, i) => i === 0
@@ -50,7 +50,9 @@ const generateCommandSource = ([operationId, m]) => {
   source += otherParams
     .map(
       p =>
-        `.option('--${_.camelCase(p.name)} <value>','${escapeQuotes(p.description)}')`
+        `.option('--${_.camelCase(p.name)} <value>','${escapeQuotes(
+          p.description
+        )}')`
     )
     .join('\n')
   const otherMapper = p =>
