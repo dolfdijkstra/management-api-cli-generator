@@ -1,6 +1,6 @@
 {
   "name": "@dolfdijkstra/oce-management-api-cli-generator",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Generator for the management api cli tools.",
   "main": "src/cli.js",
   "scripts": {
