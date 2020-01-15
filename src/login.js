@@ -1,5 +1,6 @@
 const readline = require('readline')
 const { encrypt } = require('./enc')
+const {writeConfig} = require('./cli-util')
 const login = async () => {
   const stdin = process.openStdin()
   const cl = readline.createInterface(process.stdin, process.stdout)
@@ -35,16 +36,16 @@ const login = async () => {
   const host_ = await question('OCE host ? ')
   const { origin } = new URL(host_)
 
-  const username = await question('Your username? ')
-  let password = await hiddenQuestion('Your password? ')
-  const data = Buffer.from(`${username}:${password}`).toString('base64')
-  password = ''
-  const auth = `Basic ${data}` // process.env.OCE_AUTH
+  let oauth = await hiddenQuestion('Your OAuth token? ')
+  
+  await writeConfig({host:origin, token: oauth})
+  let auth = `Bearer ${oauth}` 
+  oauth = ''
   const token = await encrypt(JSON.stringify({ host: origin, auth }))
+  auth=''
   console.log(
-    `set OCE_CLI_CONFIG in your environment to bypass login next time. `
+    `set OCE_CLI_CONFIG in your environment to bypass login next time.\nexport OCE_CLI_CONFIG="${token}" `
   )
-  console.log(`export OCE_CLI_CONFIG="${token}"`)
   process.env.OCE_AUTH = `${token}`
   return token
 }
