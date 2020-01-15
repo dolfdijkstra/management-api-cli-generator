@@ -98,4 +98,11 @@ const readConfig = async () => {
   }
   return { host: new URL(config.host).origin, auth: `Bearer ${config.token}` }
 }
-module.exports = { readConfig, readStdIn, responseHandler }
+const writeConfig = data => {
+  const fs = require('fs').promises
+  const path = require('path')
+  const homedir = require('os').homedir()
+  return fs.writeFile('.oce-config.json', JSON.stringify(data,null,2),{encoding:'utf-8',mode: 0o600})
+
+}
+module.exports = { readConfig, writeConfig, readStdIn, responseHandler }

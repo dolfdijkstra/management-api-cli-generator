@@ -1,9 +1,43 @@
 const fs = require('fs')
 const _ = require('lodash')
 const path = require('path')
-
+const jsKeywords = [
+  'break',
+  'case',
+  'catch',
+  'class',
+  'const',
+  'continue',
+  'debugger',
+  'default',
+  'delete',
+  'do',
+  'else',
+  'export',
+  'extends',
+  'finally',
+  'for',
+  'function',
+  'if',
+  'import',
+  'in',
+  'instanceof',
+  'new',
+  'return',
+  'super',
+  'switch',
+  'this',
+  'throw',
+  'try',
+  'typeof',
+  'var',
+  'void',
+  'while',
+  'with',
+  'yield'
+]
 const toParameterName = name =>
-  name === 'default' ? '_default' : _.camelCase(name)
+  jsKeywords.indexOf(name) !== -1 ? `_${_.camelCase(name)}` : _.camelCase(name)
 
 const paramValue = p => {
   if (p.in === 'header' && p.name === 'X-Requested-With') {
@@ -22,7 +56,8 @@ const requiredFirst = (a, b) => {
 }
 
 const escapeQuotes = v => (v ? v.replace(/'/g, "\\'") : '')
-const escapeDescription = param => escapeQuotes(param.description)
+const escapeBackticks = v => (v ? v.replace(/`/g, "\\`") : '')
+
 
 const onlyFirst = (e, i) => i === 0
 
@@ -37,22 +72,22 @@ const addBins = (targetDir, bins) => {
       )
     })
 }
-const generateCommandSource = ([operationId, m]) => {
+const generateCommandSource = paramRefs => ([operationId, m]) => {
   let source = `program.command('${operationId}')`
   source += `.description('${escapeQuotes(m.summary)}')`
-  const bodyParams = m.parameters.filter(p => p.in === 'body').filter(onlyFirst)
-  const otherParams = m.parameters
+  const parameters = (m.parameters || []).map(p =>
+    p['$ref'] ? paramRefs(p['$ref']) : p
+  )
+  const bodyParams = parameters.filter(p => p.in === 'body').filter(onlyFirst)
+  const otherParams = parameters
     .filter(p => p.in !== 'body')
     .filter(p => !(p.in === 'header' && p.name === 'X-Requested-With'))
-  const optionParams = m.parameters
+  const optionParams = parameters
     .filter(p => !(p.in === 'header' && p.name === 'X-Requested-With'))
     .sort(requiredFirst)
   source += otherParams
     .map(
-      p =>
-        `.option('--${_.camelCase(p.name)} <value>','${escapeQuotes(
-          p.description
-        )}')`
+      p => `.option('--${_.camelCase(p.name)} <value>',\`${escapeBackticks(p.description)}\`)`
     )
     .join('\n')
   const otherMapper = p =>
@@ -62,28 +97,34 @@ const generateCommandSource = ([operationId, m]) => {
   source += `.action(async cmd => {
            ${otherParams.map(otherMapper).join('\n')}
            ${bodyParams.map(bodyMapper).join('\n')}
-        op.${operationId}({${m.parameters
+           const op = await getOp()
+
+        op.${operationId}({${parameters
   .map(paramValue)
   .join(',')}}).then(responseHandler).catch(err => { console.error(err) })
       })
       `
   return source
 }
-const generate = (swagger, targetDir) => {
+const generate = (swagger, targetDir, prefix = 'oce-management') => {
   let version = swagger.info.version
   if (version.split('.') < 3) version = version + '.0'
   const tags = swagger.tags.reduce((aggr, o) => ({ ...aggr, [o.name]: {} }), {})
 
   const paths = Object.entries(swagger.paths)
   paths.forEach(([path, methods]) => {
-    Object.entries(methods).forEach(([method, op]) => {
-      op.tags.forEach(tag => {
-        if (!tags[tag]) {
-          throw new Error(tag)
-        }
-        tags[tag][op.operationId] = { method, path, ...op }
+    Object.entries(methods)
+      .filter(([method, op]) => op.tags)
+      .forEach(([method, op]) => {
+        const operationId = op.operationId || _.camelCase(op.summary)
+
+        op.tags.forEach(tag => {
+          if (!tags[tag]) {
+            throw new Error(tag)
+          }
+          tags[tag][operationId] = { method, path, ...op }
+        })
       })
-    })
   })
   const files = ['cli-util.js', 'login.js', 'enc.js']
   files.forEach(fileName => {
@@ -94,21 +135,27 @@ const generate = (swagger, targetDir) => {
   fs.createReadStream(path.join(__dirname, 'cli-base.js')).pipe(
     fs.createWriteStream(path.join(targetDir, 'src', 'cli.js'))
   )
-
+  const paramRefs = refName => {
+    const name = refName.split('/').slice(-1)[0]
+    const param = swagger.parameters[name]
+    return param
+  }
   Object.entries(tags).map(([tag, ops]) => {
     let source = `#!/usr/bin/env node
     ;(async () => {
     const program = require('commander');
     const {readConfig,readStdIn ,responseHandler} = require('./cli-util')
-    const {host,auth} = await readConfig()
-    if(process.stdout.isTTY) console.log('Using OCE at '+ host)
-
-    const { client } = require('./client');
-    const op = client(host, auth).${_.camelCase(tag)}
-
+    const getOp = async () => {
+      const {host,auth} = await readConfig()
+      if(process.stdout.isTTY) console.log('Using OCE at '+ host)
+  
+      const { client } = require('./client');
+      return client(host, auth).${_.camelCase(tag)}
+    }
+   
     program.version('${version}')
     ${Object.entries(ops)
-    .map(generateCommandSource)
+    .map(generateCommandSource(paramRefs))
     .join('\n')}
   
       
@@ -136,11 +183,9 @@ const generate = (swagger, targetDir) => {
     bin: cmds.reduce(
       (aggr, key) => ({
         ...aggr,
-        ['oce-management-' + _.camelCase(key)]: `./src/cli-${_.camelCase(
-          key
-        )}.js`
+        [`${prefix}-${_.kebabCase(key)}`]: `./src/cli-${_.camelCase(key)}.js`
       }),
-      { 'oce-management': './src/cli.js' }
+      { [prefix]: './src/cli.js' }
     )
   }
   return addBins(targetDir, packageCommands)

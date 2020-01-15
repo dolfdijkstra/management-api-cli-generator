@@ -3,8 +3,46 @@ const path = require('path')
 
 const fs = require('fs')
 const _ = require('lodash')
+
+const jsKeywords = [
+  'break',
+  'case',
+  'catch',
+  'class',
+  'const',
+  'continue',
+  'debugger',
+  'default',
+  'delete',
+  'do',
+  'else',
+  'export',
+  'extends',
+  'finally',
+  'for',
+  'function',
+  'if',
+  'import',
+  'in',
+  'instanceof',
+  'new',
+  'return',
+  'super',
+  'switch',
+  'this',
+  'throw',
+  'try',
+  'typeof',
+  'var',
+  'void',
+  'while',
+  'with',
+  'yield'
+]
+
 const toParameterName = name =>
-  name === 'default' ? '_default' : _.camelCase(name)
+  jsKeywords.indexOf(name) !== -1 ? `_${_.camelCase(name)}` : _.camelCase(name)
+
 const toQS = queryParams => {
   for (const propName in queryParams) {
     if (queryParams[propName] === null || queryParams[propName] === undefined) {
@@ -26,8 +64,21 @@ class SourceBlock {
     return this.lines.join('\n')
   }
 }
-const copyPackage = targetPath => {
-  const packageJSON = require('../package-cli.json')
+const copyPackage = (targetPath, name, info) => {
+  const packageJSON = {
+    name: name,
+    version: '2.' + info.version,
+    description: info.title,
+    main: 'src/client.js',
+    author: 'Dolf Dijkstra',
+    license: 'MIT',
+    dependencies: {
+      commander: '^2.19.0',
+      lodash: '^4.17.11',
+      'node-fetch': '^2.3.0',
+      debug: '^4.1.1'
+    }
+  }
   fs.writeFileSync(
     path.join(targetPath, 'package.json'),
     JSON.stringify(packageJSON, null, 2),
@@ -52,10 +103,9 @@ const moduleBlock = (tags, tagMapper) => {
 const querystring = require('querystring')
 const fetch = require('node-fetch')
 const https = require('https')
+const debug = require('debug')('oce-fetch')
 const toQS = ${toQS.toString()}
-const agent = new https.Agent({
-keepAlive: true
-})
+const agent = new https.Agent({keepAlive: true})
 
 ${children.map(block => block.source).join('\n')}
 ${exports_}
@@ -68,16 +118,19 @@ module.exports.client = client
   return block
 }
 
-const tagMapper = basePath => ([tag, ops]) => {
+const tagMapper = (basePath, paramRefs) => ([tag, ops]) => {
   const subBlock = new SourceBlock()
 
   subBlock.sourceLine(`/** ${tag} */`)
   subBlock.sourceLine(`const ${_.camelCase(tag)}_ = (host, authorization) => {`)
   Object.entries(ops).forEach(([operationId, m]) => {
-    const pathParams = m.parameters.filter(p => p.in === 'path')
-    const queryParams = m.parameters.filter(p => p.in === 'query')
-    const headerParams = m.parameters.filter(p => p.in === 'header')
-    const bodyParams = m.parameters.filter(p => p.in === 'body')
+    const parameters = (m.parameters || []).map(p =>
+      p['$ref'] ? paramRefs(p['$ref']) : p
+    )
+    const pathParams = parameters.filter(p => p.in === 'path')
+    const queryParams = parameters.filter(p => p.in === 'query')
+    const headerParams = parameters.filter(p => p.in === 'header')
+    const bodyParams = parameters.filter(p => p.in === 'body')
     let functionBody = '\n'
 
     const qArray = queryParams
@@ -116,10 +169,10 @@ const tagMapper = basePath => ([tag, ops]) => {
         .map(p => p.name)
         .map(toParameterName)}\n`
     }
-    functionBody += `if(process.env.CEC_FETCH) console.log(host+path, JSON.stringify(options))\n`
+    functionBody += `debug('%s%s %j', host, path, options)\n`
     functionBody += `return fetch(host + path,options)\n`
     subBlock.sourceLine(`/**  @function ${operationId} - ${m.summary}.`)
-    m.parameters.forEach(param => {
+    parameters.forEach(param => {
       subBlock.sourceLine(
         `* @param {${param.type}} ${toParameterName(param.name)} - ${
           param.description
@@ -128,9 +181,9 @@ const tagMapper = basePath => ([tag, ops]) => {
     })
     subBlock.sourceLine(`*/`)
     const signature =
-      m.parameters.length === 0
+      parameters.length === 0
         ? ''
-        : `{${m.parameters
+        : `{${parameters
           .map(p => p.name)
           .map(toParameterName)
           .join(',')}}`
@@ -143,25 +196,35 @@ const tagMapper = basePath => ([tag, ops]) => {
   return { tag, source: subBlock.toString() }
 }
 
-const generate = async (swagger, targetPath) => {
-  // copy package-cli to targetPath
-  copyPackage(targetPath)
+const generate = async (swagger, targetPath, name) => {
+  // create package.json in targetPath
+  copyPackage(targetPath, name, swagger.info)
 
   // group all operationsIds under a tag
   const tags = swagger.tags.reduce((aggr, o) => ({ ...aggr, [o.name]: {} }), {})
-  const basePath = swagger.basePath
+  const basePath = swagger.basePath || ''
   Object.entries(swagger.paths).forEach(([path, methods]) => {
-    Object.entries(methods).forEach(([method, op]) => {
-      op.tags.forEach(tag => {
-        if (!tags[tag]) {
-          throw new Error(tag)
-        }
-        tags[tag][op.operationId] = { method, path, ...op }
+    Object.entries(methods)
+      .filter(([method, op]) => op.tags)
+      .forEach(([method, op]) => {
+        const operationId = op.operationId || _.camelCase(op.summary)
+        op.tags.forEach(tag => {
+          if (!tags[tag]) {
+            throw new Error(tag)
+          }
+          tags[tag][operationId] = { method, path, ...op }
+        })
       })
-    })
   })
 
-  const moduleCode = [moduleBlock(tags, tagMapper(basePath))].join('\n')
+  const paramRefs = refName => {
+    const name = refName.split('/').slice(-1)[0]
+    const param = swagger.parameters[name]
+    return param
+  }
+  const moduleCode = [moduleBlock(tags, tagMapper(basePath, paramRefs))].join(
+    '\n'
+  )
   fs.writeFileSync(
     path.join(targetPath, 'src', 'client.js'),
     moduleCode,

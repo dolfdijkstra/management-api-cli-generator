@@ -1,0 +1,7 @@
+node src/cli.js list-operationIds 'https://docs.oracle.com/en/cloud/paas/content-cloud/rest-api-manage-content/swagger.json'
+node src/cli.js list-operationIds 'https://docs.oracle.com/en/cloud/paas/content-cloud/rest-api-sites-management/swagger.json'
+node src/cli.js list-operationIds 'https://docs.oracle.com/en/cloud/paas/content-cloud/rest-api-content-delivery/swagger.json'
+node src/cli.js list-operationIds 'https://docs.oracle.com/en/cloud/paas/content-cloud/rest-api-documents/swagger.json'
+node src/cli.js list-operationIds 'https://docs.oracle.com/en/cloud/paas/content-cloud/rest-api-webhooks-management/swagger.json'
+node src/cli.js list-operationIds 'https://docs.oracle.com/en/cloud/paas/content-cloud/rest-api-conversations/swagger.json' 
+node src/cli.js list-operationIds 'https://docs.oracle.com/en/cloud/paas/content-cloud/rest-api-users-groups/swagger.json' 

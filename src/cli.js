@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 const fs = require('fs')
+const path = require('path')
+const { exec } = require('child_process')
 const fetch = require('node-fetch')
 const { readJSON } = require('./util')
 
 const clientGenerator = require('./generate-api-client')
 const cliGenerator = require('./generate-api-cli')
-
-const isBlank = v => v === undefined || v === null || v === ''
+const listOperationIds = require('./documentation')
 
 const readSwagger = async location => {
   const swaggerFile =
@@ -36,58 +37,77 @@ if (require.main === module) {
       'Target directory for the generated files, defaulting to ./generated',
       './generated'
     )
+    .option(
+      '--name <name>',
+      'Name for the node package.',
+      'oce-management-api-client'
+    )
+    .option('--cmdPrefix <prefix>', 'Prefix .', 'oce-management')
     .action(async (swaggerFile, cmd) => {
-      const targetDir = cmd.target
+      const { target, name, cmdPrefix } = cmd
+      try {
+        let swagger = await readSwagger(swaggerFile)
+        const dest = path.resolve('packages')
 
+        fs.mkdirSync(target, { recursive: true })
+        fs.mkdirSync(dest, { recursive: true })
+
+        await clientGenerator.generate(swagger, target, name)
+        await cliGenerator.generate(swagger, target, cmdPrefix)
+
+        exec(
+          `prettier-standard src/*.js; standard --fix src/*.js; npm pack && cp *.tgz "${dest}"`,
+          { cwd: path.resolve(target) },
+          (err, stdout, stderr) => {
+            if (err) {
+              console.error(err)
+
+              return
+            }
+            if (stderr) {
+              console.error(stderr)
+            }
+            console.log(stdout)
+            console.info('done')
+          }
+        )
+      } catch (err) {
+        console.error(err)
+      }
+    })
+
+  program
+    .command('list-operationIds <swagger-file>')
+    .description('List the operationIds of the swagger file')
+    .action(async (swaggerFile, cmd) => {
       let swagger = await readSwagger(swaggerFile)
 
-      fs.stat(targetDir, (err, stat) => {
-        if (err) {
-          fs.mkdirSync(targetDir, { recursive: true })
-        }
-        clientGenerator.generate(swagger, targetDir).then(() => {
-          return cliGenerator
-            .generate(swagger, targetDir)
-            .then(() => {
-              console.info('done')
-              console.info(`To use the tools you have to install them:
+      const ops = await listOperationIds(swagger)
+      console.log(ops.map(({operationId, method,path,summary,parameters}) => `${method} - ${operationId} - ${path} - "${summary}" - "[${parameters.join(',')}]"`).sort().join('\n'))
+      //console.log(ops.map(({operationId, method,path,summary,parameters}) => `${operationId}`).sort().join('\n'))
 
-
-> cd ${targetDir} && npm pack && npm install -g *.tgz
-
-              `)
-            })
-            .catch(err => {
-              console.error(err)
-            })
-        })
-      })
     })
-  program
+    program
     .command('generate-client <swagger-file>')
     .description('Generate the client module')
     .option(
       '--target <target>',
       'Target directory for the generated files, defaulting to ./generated',
-      './generated'
+      './generated/cli'
+    )
+    .option(
+      '--name <name>',
+      'Name for the node package.',
+      'oce-management-api-client'
     )
     .action(async (swaggerFile, cmd) => {
-      const targetDir = cmd.target
+      const { target, name } = cmd
       let swagger = await readSwagger(swaggerFile)
 
-      fs.stat(targetDir, (err, stat) => {
-        if (err) {
-          fs.mkdirSync(targetDir)
-        }
-        clientGenerator
-          .generate(swagger, targetDir)
-          .then(() => {
-            console.info('done')
-          })
-          .catch(err => {
-            console.error(err)
-          })
-      })
+      fs.mkdirSync(target, { recursive: true })
+      await clientGenerator.generate(swagger, target, name)
+
+      console.info('done')
     })
 
   // error on unknown commands
