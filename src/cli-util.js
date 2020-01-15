@@ -57,7 +57,7 @@ const readStdIn = () => {
 }
 const readConfig = async () => {
   let host = process.env.OCE_HOST
-  let auth = process.env.OCE_AUTH
+  const auth = process.env.OCE_AUTH
   if (host && auth) {
     host = new URL(host).origin
     return { host, auth }
@@ -65,7 +65,7 @@ const readConfig = async () => {
   const env = process.env.OCE_CLI_CONFIG
   if (env) {
     const { decrypt } = require('./enc')
-    let { host, auth } = JSON.parse(await decrypt(env))
+    const { host, auth } = JSON.parse(await decrypt(env))
     return { host, auth }
   }
 
@@ -74,7 +74,7 @@ const readConfig = async () => {
   const homedir = require('os').homedir()
   const cwd = path.resolve(process.cwd())
   let parent = cwd
-  let parts = []
+  const parts = []
 
   while (parts.length < 5 && parent.split(path.sep).length > 1) {
     parts.push(path.join(parent, '.oce-config.json'))
@@ -100,9 +100,10 @@ const readConfig = async () => {
 }
 const writeConfig = data => {
   const fs = require('fs').promises
-  const path = require('path')
-  const homedir = require('os').homedir()
-  return fs.writeFile('.oce-config.json', JSON.stringify(data,null,2),{encoding:'utf-8',mode: 0o600})
 
+  return fs.writeFile('.oce-config.json', JSON.stringify(data, null, 2), {
+    encoding: 'utf-8',
+    mode: 0o600
+  })
 }
 module.exports = { readConfig, writeConfig, readStdIn, responseHandler }

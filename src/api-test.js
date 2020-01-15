@@ -11,9 +11,7 @@ readJSON(process.argv[2])
           .filter(name => path.indexOf(`{${name}}`) === -1)
           .forEach(name => {
             console.log(
-              `Path parameter "${name}"  is not defined in ${path} for operationId "${
-                op.operationId
-              }"`
+              `Path parameter "${name}"  is not defined in ${path} for operationId "${op.operationId}"`
             )
           })
       })

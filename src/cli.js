@@ -46,7 +46,7 @@ if (require.main === module) {
     .action(async (swaggerFile, cmd) => {
       const { target, name, cmdPrefix } = cmd
       try {
-        let swagger = await readSwagger(swaggerFile)
+        const swagger = await readSwagger(swaggerFile)
         const dest = path.resolve('packages')
 
         fs.mkdirSync(target, { recursive: true })
@@ -80,14 +80,23 @@ if (require.main === module) {
     .command('list-operationIds <swagger-file>')
     .description('List the operationIds of the swagger file')
     .action(async (swaggerFile, cmd) => {
-      let swagger = await readSwagger(swaggerFile)
+      const swagger = await readSwagger(swaggerFile)
 
       const ops = await listOperationIds(swagger)
-      console.log(ops.map(({operationId, method,path,summary,parameters}) => `${method} - ${operationId} - ${path} - "${summary}" - "[${parameters.join(',')}]"`).sort().join('\n'))
-      //console.log(ops.map(({operationId, method,path,summary,parameters}) => `${operationId}`).sort().join('\n'))
-
+      console.log(
+        ops
+          .map(
+            ({ operationId, method, path, summary, parameters }) =>
+              `${method} - ${operationId} - ${path} - "${summary}" - "[${parameters.join(
+                ','
+              )}]"`
+          )
+          .sort()
+          .join('\n')
+      )
+      // console.log(ops.map(({operationId, method,path,summary,parameters}) => `${operationId}`).sort().join('\n'))
     })
-    program
+  program
     .command('generate-client <swagger-file>')
     .description('Generate the client module')
     .option(
@@ -102,7 +111,7 @@ if (require.main === module) {
     )
     .action(async (swaggerFile, cmd) => {
       const { target, name } = cmd
-      let swagger = await readSwagger(swaggerFile)
+      const swagger = await readSwagger(swaggerFile)
 
       fs.mkdirSync(target, { recursive: true })
       await clientGenerator.generate(swagger, target, name)

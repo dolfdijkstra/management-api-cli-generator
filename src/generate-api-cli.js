@@ -47,17 +47,8 @@ const paramValue = p => {
   return toParameterName(p.name)
 }
 
-const requiredFirst = (a, b) => {
-  if (a.required === b.required) {
-    return 0
-  }
-  if (a.required) return -1
-  return 1
-}
-
 const escapeQuotes = v => (v ? v.replace(/'/g, "\\'") : '')
-const escapeBackticks = v => (v ? v.replace(/`/g, "\\`") : '')
-
+const escapeBackticks = v => (v ? v.replace(/`/g, '\\`') : '')
 
 const onlyFirst = (e, i) => i === 0
 
@@ -76,18 +67,19 @@ const generateCommandSource = paramRefs => ([operationId, m]) => {
   let source = `program.command('${operationId}')`
   source += `.description('${escapeQuotes(m.summary)}')`
   const parameters = (m.parameters || []).map(p =>
-    p['$ref'] ? paramRefs(p['$ref']) : p
+    p.$ref ? paramRefs(p.$ref) : p
   )
   const bodyParams = parameters.filter(p => p.in === 'body').filter(onlyFirst)
   const otherParams = parameters
     .filter(p => p.in !== 'body')
     .filter(p => !(p.in === 'header' && p.name === 'X-Requested-With'))
-  const optionParams = parameters
-    .filter(p => !(p.in === 'header' && p.name === 'X-Requested-With'))
-    .sort(requiredFirst)
+
   source += otherParams
     .map(
-      p => `.option('--${_.camelCase(p.name)} <value>',\`${escapeBackticks(p.description)}\`)`
+      p =>
+        `.option('--${_.camelCase(p.name)} <value>',\`${escapeBackticks(
+          p.description
+        )}\`)`
     )
     .join('\n')
   const otherMapper = p =>
@@ -100,8 +92,8 @@ const generateCommandSource = paramRefs => ([operationId, m]) => {
            const op = await getOp()
 
         op.${operationId}({${parameters
-  .map(paramValue)
-  .join(',')}}).then(responseHandler).catch(err => { console.error(err) })
+    .map(paramValue)
+    .join(',')}}).then(responseHandler).catch(err => { console.error(err) })
       })
       `
   return source
@@ -141,7 +133,7 @@ const generate = (swagger, targetDir, prefix = 'oce-management') => {
     return param
   }
   Object.entries(tags).map(([tag, ops]) => {
-    let source = `#!/usr/bin/env node
+    const source = `#!/usr/bin/env node
     ;(async () => {
     const program = require('commander');
     const {readConfig,readStdIn ,responseHandler} = require('./cli-util')
@@ -155,8 +147,8 @@ const generate = (swagger, targetDir, prefix = 'oce-management') => {
    
     program.version('${version}')
     ${Object.entries(ops)
-    .map(generateCommandSource(paramRefs))
-    .join('\n')}
+      .map(generateCommandSource(paramRefs))
+      .join('\n')}
   
       
     program.parse(process.argv)

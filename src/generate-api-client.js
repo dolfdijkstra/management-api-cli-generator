@@ -57,9 +57,11 @@ class SourceBlock {
   constructor () {
     this.lines = []
   }
+
   sourceLine (line) {
     this.lines.push(line)
   }
+
   toString () {
     return this.lines.join('\n')
   }
@@ -125,7 +127,7 @@ const tagMapper = (basePath, paramRefs) => ([tag, ops]) => {
   subBlock.sourceLine(`const ${_.camelCase(tag)}_ = (host, authorization) => {`)
   Object.entries(ops).forEach(([operationId, m]) => {
     const parameters = (m.parameters || []).map(p =>
-      p['$ref'] ? paramRefs(p['$ref']) : p
+      p.$ref ? paramRefs(p.$ref) : p
     )
     const pathParams = parameters.filter(p => p.in === 'path')
     const queryParams = parameters.filter(p => p.in === 'query')
@@ -149,8 +151,8 @@ const tagMapper = (basePath, paramRefs) => ([tag, ops]) => {
     }
     functionBody +=
       queryParams.length === 0
-        ? `const qs = ''\n`
-        : `const qs = toQS(queryParams)\n`
+        ? "const qs = ''\n"
+        : 'const qs = toQS(queryParams)\n'
 
     const replacedPath = pathParams
       .map(p => p.name)
@@ -169,8 +171,8 @@ const tagMapper = (basePath, paramRefs) => ([tag, ops]) => {
         .map(p => p.name)
         .map(toParameterName)}\n`
     }
-    functionBody += `debug('%s%s %j', host, path, options)\n`
-    functionBody += `return fetch(host + path,options)\n`
+    functionBody += "debug('%s%s %j', host, path, options)\n"
+    functionBody += 'return fetch(host + path,options)\n'
     subBlock.sourceLine(`/**  @function ${operationId} - ${m.summary}.`)
     parameters.forEach(param => {
       subBlock.sourceLine(
@@ -179,20 +181,20 @@ const tagMapper = (basePath, paramRefs) => ([tag, ops]) => {
         }.`
       )
     })
-    subBlock.sourceLine(`*/`)
+    subBlock.sourceLine('*/')
     const signature =
       parameters.length === 0
         ? ''
         : `{${parameters
-          .map(p => p.name)
-          .map(toParameterName)
-          .join(',')}}`
+            .map(p => p.name)
+            .map(toParameterName)
+            .join(',')}}`
     subBlock.sourceLine(
       `   const ${operationId} = (${signature}) => { ${functionBody} }`
     )
   })
   subBlock.sourceLine(`return { ${Object.keys(ops).join(',')}}`)
-  subBlock.sourceLine(`}`)
+  subBlock.sourceLine('}')
   return { tag, source: subBlock.toString() }
 }
 
