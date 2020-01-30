@@ -1,6 +1,8 @@
 const fs = require('fs')
 const _ = require('lodash')
 const path = require('path')
+const copydir = require('copy-dir')
+
 const jsKeywords = [
   'break',
   'case',
@@ -118,15 +120,8 @@ const generate = (swagger, targetDir, prefix = 'oce-management') => {
         })
       })
   })
-  const files = ['cli-util.js', 'login.js', 'enc.js']
-  files.forEach(fileName => {
-    fs.createReadStream(path.join(__dirname, fileName)).pipe(
-      fs.createWriteStream(path.join(targetDir, 'src', fileName))
-    )
-  })
-  fs.createReadStream(path.join(__dirname, 'cli-base.js')).pipe(
-    fs.createWriteStream(path.join(targetDir, 'src', 'cli.js'))
-  )
+  copydir.sync(path.join(__dirname, 'target'), path.join(targetDir, 'src'))
+  
   const paramRefs = refName => {
     const name = refName.split('/').slice(-1)[0]
     const param = swagger.parameters[name]
@@ -177,7 +172,7 @@ const generate = (swagger, targetDir, prefix = 'oce-management') => {
         ...aggr,
         [`${prefix}-${_.kebabCase(key)}`]: `./src/cli-${_.camelCase(key)}.js`
       }),
-      { [prefix]: './src/cli.js' }
+      { [prefix]: './src/oauth/login-oauth-cli.js' }
     )
   }
   return addBins(targetDir, packageCommands)

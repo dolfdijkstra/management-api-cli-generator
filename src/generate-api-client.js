@@ -69,16 +69,18 @@ class SourceBlock {
 const copyPackage = (targetPath, name, info) => {
   const packageJSON = {
     name: name,
-    version: '2.' + info.version,
+    version: '3.' + info.version,
     description: info.title,
     main: 'src/client.js',
     author: 'Dolf Dijkstra',
     license: 'MIT',
     dependencies: {
-      commander: '^2.19.0',
+      commander: '^4.1.0',
       lodash: '^4.17.11',
       'node-fetch': '^2.3.0',
-      debug: '^4.1.1'
+      debug: '^4.1.1',
+      moment: '^2.24.0',
+      inquirer: '^7.0.3'
     }
   }
   fs.writeFileSync(
@@ -171,7 +173,7 @@ const tagMapper = (basePath, paramRefs) => ([tag, ops]) => {
         .map(p => p.name)
         .map(toParameterName)}\n`
     }
-    functionBody += "debug('%s%s %j', host, path, options)\n"
+    functionBody += "debug('%s%s %j', host, path, {method: options.method, headers})\n"
     functionBody += 'return fetch(host + path,options)\n'
     subBlock.sourceLine(`/**  @function ${operationId} - ${m.summary}.`)
     parameters.forEach(param => {

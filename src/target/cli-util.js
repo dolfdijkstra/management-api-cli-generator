@@ -55,6 +55,7 @@ const readStdIn = () => {
     })
   })
 }
+const getToken = require('./oauth')
 const readConfig = async () => {
   let host = process.env.OCE_HOST
   const auth = process.env.OCE_AUTH
@@ -69,31 +70,10 @@ const readConfig = async () => {
     return { host, auth }
   }
 
-  const fs = require('fs')
-  const path = require('path')
-  const homedir = require('os').homedir()
-  const cwd = path.resolve(process.cwd())
-  let parent = cwd
-  const parts = []
-
-  while (parts.length < 5 && parent.split(path.sep).length > 1) {
-    parts.push(path.join(parent, '.oce-config.json'))
-    parent = path.dirname(parent)
-  }
-  const homeConfig = path.join(homedir, '.oce-config.json')
-  if (parts.indexOf(homeConfig) === -1) parts.push()
-  const config = parts.reduce((a, f) => {
-    return a.host && a.token
-      ? a
-      : fs.existsSync(f)
-        ? JSON.parse(fs.readFileSync(f))
-        : a
-  }, '')
-  if (config === '') {
+  const config = await getToken()
+  if (!(config && config.token)) {
     throw new Error(
-      `.oce-config.json could not be found in '${parts.join(
-        ','
-      )}' or does not have a host and token fields.`
+      `The oauth token could not be found. Please log in first with oce-login.`
     )
   }
   return { host: new URL(config.host).origin, auth: `Bearer ${config.token}` }

@@ -20,3 +20,5 @@ rm -Rf generated/users-api
 node src/cli.js generate-all 'https://docs.oracle.com/en/cloud/paas/content-cloud/rest-api-users-groups/swagger.json' --target './generated/users-api' --name oce-users-cli --cmdPrefix oce-users
 
 
+rm -Rf generated/activity-api
+node src/cli.js generate-all 'https://docs.oracle.com/en/cloud/paas/content-cloud/rest-api-activity-log/swagger.json' --target './generated/activity-api' --name oce-activity-cli --cmdPrefix oce-activity
