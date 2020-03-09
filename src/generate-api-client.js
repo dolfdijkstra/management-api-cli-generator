@@ -66,10 +66,14 @@ class SourceBlock {
     return this.lines.join('\n')
   }
 }
+const version = info => {
+  const p = info.version.split('.')
+  return `3.${p[0]}.${p[1]}${p[2]}`
+}
 const copyPackage = (targetPath, name, info) => {
   const packageJSON = {
     name: name,
-    version: '3.' + info.version,
+    version: version(info),
     description: info.title,
     main: 'src/client.js',
     author: 'Dolf Dijkstra',
