@@ -1,2 +1,2 @@
-const { getToken } = require('./login-oauth')
-module.exports = getToken
+const { getAuth } = require('./login-oauth')
+module.exports = getAuth

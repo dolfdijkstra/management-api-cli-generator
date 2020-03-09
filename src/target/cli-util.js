@@ -55,7 +55,7 @@ const readStdIn = () => {
     })
   })
 }
-const getToken = require('./oauth')
+const getAuth = require('./oauth')
 const readConfig = async () => {
   let host = process.env.OCE_HOST
   const auth = process.env.OCE_AUTH
@@ -70,13 +70,14 @@ const readConfig = async () => {
     return { host, auth }
   }
 
-  const config = await getToken()
-  if (!(config && config.token)) {
+  const config = await getAuth()
+  if (!(config && (config.token|| config.basic))) {
     throw new Error(
-      `The oauth token could not be found. Please log in first with oce-login.`
+      `The oauth token could not be found. Please log in first with oce-management oauth-login.`
     )
   }
-  return { host: new URL(config.host).origin, auth: `Bearer ${config.token}` }
+  if(config.token) return { host: new URL(config.host).origin, auth: `Bearer ${config.token}` }
+  if(config.basic) return { host: new URL(config.host).origin, auth: `Basic ${config.basic}` }
 }
 const writeConfig = data => {
   const fs = require('fs').promises

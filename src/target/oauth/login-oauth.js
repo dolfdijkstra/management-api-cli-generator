@@ -43,7 +43,8 @@ const userToken = async ({
  */
 const readPersistedToken = () => {
   return readEncrypted(tokenFileName)
-    .then(({ host, expiresAt, token }) => {
+    .then(({ host, expiresAt, token, basic }) => {
+      if (basic) return { host, basic }
       if (moment().isBefore(moment(expiresAt))) {
         return { host, expiresAt, token }
       } else {
@@ -53,9 +54,7 @@ const readPersistedToken = () => {
     .catch(err => {
       if (err.code === 'ENOENT') return null
       console.error(
-        `Error when trying to read ${tokenFileName}: ${err.code} - ${
-          err.message
-        }.`
+        `Error when trying to read ${tokenFileName}: ${err.code} - ${err.message}.`
       )
       return null
     })
@@ -100,6 +99,22 @@ const getToken = () => {
     })
   })
 }
+
+const getAuth = () => {
+  /* 1. see if persisted token is there and valid
+     2. otherwise, if no login-config, bail
+     3. go and fetch new token based on login config
+   */
+  return readPersistedToken(data => {
+    if (data && data.token) return `Bearer ${data.token}`
+    if (data && data.basic) return `Basic ${data.basic}`
+    return readCredentials().then(cred => {
+      if (cred && cred.idcsHost) {
+        return generateNewToken(cred)
+      }
+    })
+  })
+}
 module.exports = {
   readPersistedToken,
   readCredentials,
@@ -108,5 +123,6 @@ module.exports = {
   persistCredentials,
   configFileName,
   tokenFileName,
-  getToken
+  getToken,
+  getAuth
 }

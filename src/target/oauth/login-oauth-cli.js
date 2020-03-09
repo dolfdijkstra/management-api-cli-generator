@@ -41,7 +41,7 @@ const printJwtToken = async () => {
     }
   }
 }
-const login = ({ host, clientId, scope, userName, clientSecret }) => {
+const loginOAuth = ({ host, clientId, scope, userName, clientSecret }) => {
   const idcsHostPromise = fetch(`${host}/documents/web`, {
     redirect: 'manual'
   }).then(res => {
@@ -84,6 +84,7 @@ const login = ({ host, clientId, scope, userName, clientSecret }) => {
         host
       }
       await persistCredentials(cred)
+     
 
       await generateNewToken(cred).then(persistToken)
       console.log(
@@ -92,11 +93,43 @@ const login = ({ host, clientId, scope, userName, clientSecret }) => {
     })
     .catch(console.error)
 }
+const loginBasic = ({ host,  userName }) => {
+ 
+  const questions = [
+    {
+      type: 'password',
+      name: 'userPassword',
+      message: `Please provide the password for "${userName}":`
+    }
+  ]
+ 
+  
+  const inquirer = require('inquirer')
+  inquirer
+    .prompt(questions)
+    .then(async answers => {
+      let { userPassword } = answers
+      
+      const password = userPassword
+      
+      const cred = {
+        host: new URL(host).origin,
+        userName,
+        password
+      }
+      await persistCredentials(cred)
+      await persistToken({host, basic: Buffer.from(`${userName}:${password}`).toString('base64')})
+      console.log(
+        `Credentials are persisted to ${configFileName} and ${tokenFileName}.`
+      )
+    })
+    .catch(console.error)
+}
 if (require.main === module) {
   const commander = require('commander')
   commander
-    .command('login')
-    .description('Login') // command description
+    .command('login-oauth')
+    .description('Generate persistant OAuth login configuration') // command description
     .requiredOption('-h, --host <host>', 'OCE Host', v => new URL(v).origin)
     .requiredOption('-c, --client-id <client-id>', 'Client Id')
     .option('-s, --client-secret <secret>', 'Client secret')
@@ -105,7 +138,16 @@ if (require.main === module) {
       '-u, --user-name <userName>',
       'Username of the user logging into OCE'
     )
-    .action(login)
+    .action(loginOAuth)
+    commander
+    .command('login-basic')
+    .description('Generate persistant Basic login configuration') // command description
+    .requiredOption('-h, --host <host>', 'OCE Host', v => new URL(v).origin)
+    .requiredOption(
+      '-u, --user-name <userName>',
+      'Username of the user logging into OCE'
+    )
+    .action(loginBasic)
   commander
     .command('new-token')
     .description('Fetch a new Access Token') // command description
