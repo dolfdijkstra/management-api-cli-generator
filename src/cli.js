@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 const fs = require('fs')
 const path = require('path')
-const { exec } = require('child_process')
+const { promisify } = require('util')
+const exec = promisify(require('child_process').exec)
 const fetch = require('node-fetch')
 const { readJSON } = require('./util')
 
@@ -24,7 +25,20 @@ const readSwagger = async location => {
     return readJSON(swaggerFile)
   }
 }
+const execInShell = target => async cmd => {
+  const { stdout, stderr } = await exec(cmd, { cwd: path.resolve(target) })
+  /*           if (err) {
+              console.error(err)
 
+              return
+            }
+   */
+
+  if (stderr) {
+    console.error(stderr)
+  }
+  console.log(stdout)
+}
 if (require.main === module) {
   var version = require('../package.json').version
   const program = require('commander')
@@ -46,31 +60,27 @@ if (require.main === module) {
     .action(async (swaggerFile, cmd) => {
       const { target, name, cmdPrefix } = cmd
       try {
+        console.log(`generating source files in ${target}`)
         const swagger = await readSwagger(swaggerFile)
         const dest = path.resolve('packages')
 
         fs.mkdirSync(target, { recursive: true })
         fs.mkdirSync(dest, { recursive: true })
+        await fs.promises.writeFile(
+          path.join(target, 'swagger.json'),
+          JSON.stringify(swagger, null, 2),
+          'utf8'
+        )
 
         await clientGenerator.generate(swagger, target, name)
         await cliGenerator.generate(swagger, target, cmdPrefix)
+        console.log(`packaging for ${target}`)
+        const exec = execInShell(target)
+        await exec('prettier-standard \'src/**/*.js\'')
+        await exec('standard --fix \'src/**/*.js\' || true')
+        await exec(`npm pack && cp *.tgz "${dest}"`)
 
-        exec(
-          `prettier-standard src/*.js; standard --fix src/*.js; npm pack && cp *.tgz "${dest}"`,
-          { cwd: path.resolve(target) },
-          (err, stdout, stderr) => {
-            if (err) {
-              console.error(err)
-
-              return
-            }
-            if (stderr) {
-              console.error(stderr)
-            }
-            console.log(stdout)
-            console.info('done')
-          }
-        )
+        console.log(`done ${swaggerFile}`)
       } catch (err) {
         console.error(err)
       }
