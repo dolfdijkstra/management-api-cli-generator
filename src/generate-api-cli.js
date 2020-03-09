@@ -79,13 +79,13 @@ const generateCommandSource = paramRefs => ([operationId, m]) => {
   source += otherParams
     .map(
       p =>
-        `.option('--${_.camelCase(p.name)} <value>',\`${escapeBackticks(
+        `.${p.required ? 'requiredOption':'option'}('--${_.camelCase(p.name)} <value>',\`${escapeBackticks(
           p.description
         )}\`)`
     )
     .join('\n')
   const otherMapper = p =>
-    'const ' + toParameterName(p.name) + '=' + 'cmd.' + _.camelCase(p.name)
+    `const ${toParameterName(p.name)} = cmd.${ _.camelCase(p.name)}`
   const bodyMapper = p =>
     `const  ${toParameterName(p.name)} = await readStdIn()`
   source += `.action(async cmd => {
@@ -93,7 +93,7 @@ const generateCommandSource = paramRefs => ([operationId, m]) => {
            ${bodyParams.map(bodyMapper).join('\n')}
            const op = await getOp()
 
-        op.${operationId}({${parameters
+        return op.${operationId}({${parameters
     .map(paramValue)
     .join(',')}}).then(responseHandler).catch(err => { console.error(err) })
       })
@@ -102,7 +102,7 @@ const generateCommandSource = paramRefs => ([operationId, m]) => {
 }
 const generate = (swagger, targetDir, prefix = 'oce-management') => {
   let version = swagger.info.version
-  if (version.split('.') < 3) version = version + '.0'
+  if (version.split('.').length < 3) version = version + '.0'
   const tags = swagger.tags.reduce((aggr, o) => ({ ...aggr, [o.name]: {} }), {})
 
   const paths = Object.entries(swagger.paths)
@@ -121,7 +121,7 @@ const generate = (swagger, targetDir, prefix = 'oce-management') => {
       })
   })
   copydir.sync(path.join(__dirname, 'target'), path.join(targetDir, 'src'))
-  
+
   const paramRefs = refName => {
     const name = refName.split('/').slice(-1)[0]
     const param = swagger.parameters[name]
@@ -129,9 +129,10 @@ const generate = (swagger, targetDir, prefix = 'oce-management') => {
   }
   Object.entries(tags).map(([tag, ops]) => {
     const source = `#!/usr/bin/env node
+    if (require.main === module) {
     ;(async () => {
     const program = require('commander');
-    const {readConfig,readStdIn ,responseHandler} = require('./cli-util')
+    const {readConfig, readStdIn, responseHandler} = require('./cli-util')
     const getOp = async () => {
       const {host,auth} = await readConfig()
       if(process.stdout.isTTY) console.log('Using OCE at '+ host)
@@ -145,15 +146,21 @@ const generate = (swagger, targetDir, prefix = 'oce-management') => {
       .map(generateCommandSource(paramRefs))
       .join('\n')}
   
-      
-    program.parse(process.argv)
+      program.on('command:*', function () {
+        console.error('Invalid command: %s\\n', program.args.join(' '))
+        program.help()
+        process.exit(1)
+      })
+      await program.parseAsync(process.argv)
         // if not command is found, print help
-        if (program.args.length === 0) {
+        if (process.argv.length === 2) {
           // e.g. display usage
           program.help();
         }
+
       })().catch(console.error) 
-        `
+    }
+    `
     fs.writeFileSync(
       path.join(targetDir, 'src/cli-' + _.camelCase(tag) + '.js'),
       source,
