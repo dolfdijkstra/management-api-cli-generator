@@ -67,8 +67,8 @@ class SourceBlock {
   }
 }
 const version = info => {
-  const p = info.version.split('.')
-  return `3.${p[0]}.${p[1]}${p[2]}`
+  //const p = info.version.split('.')
+  return `4.0.${info.version.split('.').join('')}`
 }
 const copyPackage = (targetPath, name, info) => {
   const packageJSON = {
