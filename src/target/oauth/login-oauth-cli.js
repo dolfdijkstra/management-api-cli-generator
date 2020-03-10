@@ -26,6 +26,15 @@ const printToken = async () => {
     console.log(JSON.stringify(cred))
   }
 }
+const printCredentials = async () => {
+  const cred = await readCredentials().catch(console.error)
+  if (!cred) {
+    console.error("Credentials file can't be found.")
+  } else {
+    cred.password='*'.repeat(cred.password.length)
+    console.log(JSON.stringify(cred))
+  }
+}
 const printJwtToken = async () => {
   const cred = await readPersistedToken().catch(console.error)
   if (!cred) {
@@ -156,6 +165,10 @@ if (require.main === module) {
     .command('print-token')
     .description('Print the persisted Access Token')
     .action(printToken)
+    commander
+    .command('print-credentials')
+    .description('Print the persisted Credentials file')
+    .action(printCredentials)
   commander
     .command('print-jwt-token')
     .description('Print the JWT details of the persisted Access Token')
