@@ -42,6 +42,12 @@ const jsKeywords = [
 
 const toParameterName = name =>
   jsKeywords.indexOf(name) !== -1 ? `_${_.camelCase(name)}` : _.camelCase(name)
+const toSignature = name =>
+  jsKeywords.indexOf(name) !== -1
+    ? `_${_.camelCase(name)}`
+    : name == 'X-Requested-With'
+    ? 'xRequestedWith = "XMLHttpRequest"'
+    : _.camelCase(name)
 
 const toQS = queryParams => {
   for (const propName in queryParams) {
@@ -168,7 +174,11 @@ const tagMapper = (basePath, paramRefs) => ([tag, ops]) => {
     const hp = headerParams
       .map(header => ", '" + header.name + "': " + toParameterName(header.name))
       .join('')
-    functionBody += `const headers = {"Authorization":authorization, "Content-Type":"application/json"${hp}}\n`
+    const ct =
+      m.method.toUpperCase() === 'POST' || m.method.toUpperCase() === 'PUT'
+        ? ', "Content-Type":"application/json"'
+        : ''
+    functionBody += `const headers = {"Authorization":authorization, "Accept":"application/json"${ct}${hp}}\n`
     functionBody += `const options = {method: "${m.method.toUpperCase()}", headers, agent ${
       hasData ? ',body: data' : ''
     }}\n`
@@ -177,7 +187,8 @@ const tagMapper = (basePath, paramRefs) => ([tag, ops]) => {
         .map(p => p.name)
         .map(toParameterName)}\n`
     }
-    functionBody += "debug('%s%s %j', host, path, {method: options.method, headers})\n"
+    functionBody +=
+      "debug('%s%s %j', host, path, {method: options.method, headers})\n"
     functionBody += 'return fetch(host + path,options)\n'
     subBlock.sourceLine(`/**  @function ${operationId} - ${m.summary}.`)
     parameters.forEach(param => {
@@ -193,8 +204,8 @@ const tagMapper = (basePath, paramRefs) => ([tag, ops]) => {
         ? ''
         : `{${parameters
             .map(p => p.name)
-            .map(toParameterName)
-            .join(',')}}`
+            .map(toSignature)
+            .join(',')}}={}`
     subBlock.sourceLine(
       `   const ${operationId} = (${signature}) => { ${functionBody} }`
     )
