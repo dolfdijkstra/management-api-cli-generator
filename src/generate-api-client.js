@@ -45,9 +45,9 @@ const toParameterName = name =>
 const toSignature = name =>
   jsKeywords.indexOf(name) !== -1
     ? `_${_.camelCase(name)}`
-    : name == 'X-Requested-With'
-    ? 'xRequestedWith = "XMLHttpRequest"'
-    : _.camelCase(name)
+    : name === 'X-Requested-With'
+      ? 'xRequestedWith = "XMLHttpRequest"'
+      : _.camelCase(name)
 
 const toQS = queryParams => {
   for (const propName in queryParams) {
@@ -73,7 +73,7 @@ class SourceBlock {
   }
 }
 const version = info => {
-  //const p = info.version.split('.')
+  // const p = info.version.split('.')
   return `4.0.${info.version.split('.').join('')}`
 }
 const copyPackage = (targetPath, name, info) => {

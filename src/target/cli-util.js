@@ -71,13 +71,13 @@ const readConfig = async () => {
   }
 
   const config = await getAuth()
-  if (!(config && (config.token|| config.basic))) {
+  if (!(config && (config.token || config.basic))) {
     throw new Error(
-      `The oauth token could not be found. Please log in first with oce-management oauth-login.`
+      'The oauth token could not be found. Please log in first with oce-management oauth-login.'
     )
   }
-  if(config.token) return { host: new URL(config.host).origin, auth: `Bearer ${config.token}` }
-  if(config.basic) return { host: new URL(config.host).origin, auth: `Basic ${config.basic}` }
+  if (config.token) { return { host: new URL(config.host).origin, auth: `Bearer ${config.token}` } }
+  if (config.basic) { return { host: new URL(config.host).origin, auth: `Basic ${config.basic}` } }
 }
 const writeConfig = data => {
   const fs = require('fs').promises

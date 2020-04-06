@@ -31,7 +31,7 @@ const printCredentials = async () => {
   if (!cred) {
     console.error("Credentials file can't be found.")
   } else {
-    cred.password='*'.repeat(cred.password.length)
+    cred.password = '*'.repeat(cred.password.length)
     console.log(JSON.stringify(cred))
   }
 }
@@ -42,8 +42,8 @@ const printJwtToken = async () => {
   } else {
     const { token } = cred
     if (token) {
-      let buff = Buffer.from(token.split('.')[1], 'base64')
-      let data = JSON.parse(buff.toString('ascii'))
+      const buff = Buffer.from(token.split('.')[1], 'base64')
+      const data = JSON.parse(buff.toString('ascii'))
       console.log(JSON.stringify(data, null, 2))
     } else {
       console.error(JSON.stringify(cred))
@@ -93,7 +93,6 @@ const loginOAuth = ({ host, clientId, scope, userName, clientSecret }) => {
         host
       }
       await persistCredentials(cred)
-     
 
       await generateNewToken(cred).then(persistToken)
       console.log(
@@ -102,8 +101,7 @@ const loginOAuth = ({ host, clientId, scope, userName, clientSecret }) => {
     })
     .catch(console.error)
 }
-const loginBasic = ({ host,  userName }) => {
- 
+const loginBasic = ({ host, userName }) => {
   const questions = [
     {
       type: 'password',
@@ -111,23 +109,25 @@ const loginBasic = ({ host,  userName }) => {
       message: `Please provide the password for "${userName}":`
     }
   ]
- 
-  
+
   const inquirer = require('inquirer')
   inquirer
     .prompt(questions)
     .then(async answers => {
-      let { userPassword } = answers
-      
+      const { userPassword } = answers
+
       const password = userPassword
-      
+
       const cred = {
         host: new URL(host).origin,
         userName,
         password
       }
       await persistCredentials(cred)
-      await persistToken({host, basic: Buffer.from(`${userName}:${password}`).toString('base64')})
+      await persistToken({
+        host,
+        basic: Buffer.from(`${userName}:${password}`).toString('base64')
+      })
       console.log(
         `Credentials are persisted to ${configFileName} and ${tokenFileName}.`
       )
@@ -148,7 +148,7 @@ if (require.main === module) {
       'Username of the user logging into OCE'
     )
     .action(loginOAuth)
-    commander
+  commander
     .command('login-basic')
     .description('Generate persistant Basic login configuration') // command description
     .requiredOption('-h, --host <host>', 'OCE Host', v => new URL(v).origin)
@@ -165,7 +165,7 @@ if (require.main === module) {
     .command('print-token')
     .description('Print the persisted Access Token')
     .action(printToken)
-    commander
+  commander
     .command('print-credentials')
     .description('Print the persisted Credentials file')
     .action(printCredentials)

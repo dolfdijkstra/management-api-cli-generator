@@ -70,8 +70,8 @@ const generateNewToken = cred => {
       throw response
     })
     .then(data => {
-      let { access_token: token, expires_in: expiresIn } = data
-      let exp = moment().add(expiresIn, 'seconds')
+      const { access_token: token, expires_in: expiresIn } = data
+      const exp = moment().add(expiresIn, 'seconds')
       const { host } = cred
 
       return { host, token, expiresAt: exp.toISOString() }
