@@ -79,13 +79,13 @@ const generateCommandSource = paramRefs => ([operationId, m]) => {
   source += otherParams
     .map(
       p =>
-        `.${p.required ? 'requiredOption':'option'}('--${_.camelCase(p.name)} <value>',\`${escapeBackticks(
-          p.description
-        )}\`)`
+        `.${p.required ? 'requiredOption' : 'option'}('--${_.camelCase(
+          p.name
+        )} <value>',\`${escapeBackticks(p.description)}\`)`
     )
     .join('\n')
   const otherMapper = p =>
-    `const ${toParameterName(p.name)} = cmd.${ _.camelCase(p.name)}`
+    `const ${toParameterName(p.name)} = cmd.${_.camelCase(p.name)}`
   const bodyMapper = p =>
     `const  ${toParameterName(p.name)} = await readStdIn()`
   source += `.action(async cmd => {
