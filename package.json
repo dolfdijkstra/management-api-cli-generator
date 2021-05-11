@@ -21,6 +21,6 @@
   },
   "devDependencies": {
     "prettier-standard": "^16.2.1",
-    "standard": "^14.3.3"
+    "standard": "^10.0.3"
   }
 }
