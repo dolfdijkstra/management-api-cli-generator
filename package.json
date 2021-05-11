@@ -16,11 +16,11 @@
   "dependencies": {
     "commander": "^4.1.0",
     "copy-dir": "^1.2.0",
-    "lodash": "^4.17.15",
-    "node-fetch": "^2.6.0"
+    "lodash": "^4.17.21",
+    "node-fetch": "^2.6.1"
   },
   "devDependencies": {
     "prettier-standard": "^16.2.1",
-    "standard": "^10.0.3"
+    "standard": "^16.0.3"
   }
 }
